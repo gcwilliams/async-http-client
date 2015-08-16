@@ -80,8 +80,13 @@ public class NettyAsyncHttpClient implements AsyncHttpClient {
                 public void operationComplete(ChannelFuture future) throws Exception {
                     Channel channel = future.channel();
                     channel.pipeline().addLast(new HttpResponseHandler(resolve, reject));
-                    channel.writeAndFlush(request);
-                    channel.closeFuture();
+                    if (future.isSuccess()) {
+                        channel.writeAndFlush(request);
+                        future.channel().closeFuture();
+                    } else {
+                        future.channel().pipeline().fireExceptionCaught(future.cause());
+                        future.channel().closeFuture();
+                    }
                 }
             });
         });
@@ -126,6 +131,7 @@ public class NettyAsyncHttpClient implements AsyncHttpClient {
                 reject.accept(cause instanceof Exception ? (Exception)cause : new RuntimeException(cause));
             } finally {
                 ReferenceCountUtil.release(cause);
+                ctx.channel().closeFuture();
             }
         }
     }
