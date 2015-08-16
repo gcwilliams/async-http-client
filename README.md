@@ -28,6 +28,10 @@ the [Folktale Task](https://github.com/folktale/data.task) library
 
 As inspired by `PointFree-Fantasy`, operations can be composed together
 
+    // create a new client
+    EventLoopGroup loop = new NioEventLoopGroup(1);
+    AsyncHttpClient client = new NettyAsyncHttpClient(loop);
+
     // create operation
     Function<AsyncHttpMessage, String> decodeBody = message -> new String(message.getContent(), Charset.forName("utf-8"));
 
