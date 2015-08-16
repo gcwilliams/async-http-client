@@ -73,19 +73,19 @@ The tasks class provides utilities for working with tasks.
 
 ##### Combining Tasks
 
-Create a task that resolves when all the provided tasks are resolved
+Create a task that resolves when all of the provided tasks are resolved
 
     // Task<String>... -> Task<List<String>>
     Task<List<String>> task = Tasks.all(Tasks.of(""), Tasks.of(""));
 
-Create a task that resolves when any the provided tasks are resolved
+Create a task that resolves when any of the provided tasks are resolved
 
     // Task<String>... -> Task<String>
     Task<String> task = Tasks.any(Tasks.of(""), Tasks.of(""))
 
 ##### Waiting
 
-You _can_ wait on a task to complete, this operation will throw an exception if that task fails or times out
+You _can_ wait on a task to complete, this operation will throw an exception if that task fails or the timeout is exceeded
 
     // Task<String> -> String
     String result = Tasks.get(Tasks.of(""), 1000);
