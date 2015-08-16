@@ -1,4 +1,4 @@
-### ASync HTTP Client
+### Async HTTP Client
 
 An async http client utilizing [Netty](http://netty.io/) and a functional approach inspired by
 the awesome DrBoolean and his [PointFree-Fantasy](https://github.com/DrBoolean/pointfree-fantasy) project and
