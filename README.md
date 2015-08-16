@@ -1,8 +1,8 @@
 ### ASync HTTP Client
 
 An async http client utilizing [Netty](http://netty.io/) and a functional approach inspired by
-the awesome DrBoolean and his [PointFree-Fantasy](https://github.com/DrBoolean/pointfree-fantasy) and
-[Folktale Task](https://github.com/folktale/data.task)
+the awesome DrBoolean and his [PointFree-Fantasy](https://github.com/DrBoolean/pointfree-fantasy) project and
+the [Folktale Task](https://github.com/folktale/data.task) library
 
 #### Simple Usage
 
