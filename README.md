@@ -72,12 +72,12 @@ The tasks class provides utilities for working with tasks.
 Create a task that resolves when all the provided tasks are resolved
 
     // Task<String>... -> Task<List<String>>
-    Task<List<String>> task = Task<Tasks.all(Tasks.of(""), Tasks.of(""));
+    Task<List<String>> task = Tasks.all(Tasks.of(""), Tasks.of(""));
 
 Create a task that resolves when any the provided tasks are resolved
 
     // Task<String>... -> Task<String>
-    Task<String> task = Task<Tasks.any(Tasks.of(""), Tasks.of(""))
+    Task<String> task = Tasks.any(Tasks.of(""), Tasks.of(""))
 
 ##### Waiting
 
