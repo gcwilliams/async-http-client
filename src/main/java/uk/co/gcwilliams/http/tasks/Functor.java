@@ -1,4 +1,4 @@
-package uk.co.gcwilliams.http.pointfree;
+package uk.co.gcwilliams.http.tasks;
 
 import java.util.function.Function;
 
@@ -15,5 +15,5 @@ public interface Functor<V> {
      * @param fn the function to call
      * @return the new value
      */
-    <NV> V map(Function<V, NV> fn);
+    <NV, F extends Functor<NV>> F map(Function<V, NV> fn);
 }

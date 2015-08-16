@@ -3,12 +3,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>uk.co.gcwilliams</groupId>
-  <artifactId>tasks</artifactId>
+  <artifactId>async-http-client</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>tasks</name>
-  <url>http://maven.apache.org</url>
+  <name>async-http-client</name>
+  <url>https://github.com/gcwilliams/async-http-client</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -19,17 +19,6 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
       <version>4.0.30.Final</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jsoup</groupId>
-      <artifactId>jsoup</artifactId>
-      <version>1.8.3</version>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 

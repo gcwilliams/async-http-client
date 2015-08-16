@@ -9,7 +9,7 @@ import java.util.function.Function;
  *
  * Created by GWilliams on 15/08/2015.
  */
-public class Task<V> {
+public class Task<V> implements Functor<V> {
 
     private final BiConsumer<Consumer<V>, Consumer<Exception>> computation;
 
@@ -28,9 +28,11 @@ public class Task<V> {
      * @param computation the computation
      * @return the task
      */
-    public <NV> Task<NV> map(Function<V, NV> computation) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <NV, F extends Functor<NV>> F map(Function<V, NV> computation) {
         BiConsumer<Consumer<V>, Consumer<Exception>> previous = this.computation;
-        return new Task<>((resolve, reject) -> {
+        return (F) new Task<NV>((resolve, reject) -> {
             previous.accept(v -> resolve.accept(computation.apply(v)), reject::accept);
         });
     }
