@@ -55,8 +55,34 @@ As inspired by `PointFree-Fantasy`, operations can be composed together
 
     }, System.out::println);
 
+#### Tasks
 
+The tasks class provides utilities for working with tasks.
 
+##### Creating Tasks
 
+    // String -> Task<String>
+    Task<String> task = Tasks.of("");
 
+    // String -> Task<Exception>
+    Task<String> task = Tasks.rejected(new RuntimeException());
+
+##### Combining Tasks
+
+Create a task that resolves when all the provided tasks are resolved
+
+    // Task<String>... -> Task<List<String>>
+    Task<List<String>> task = Task<Tasks.all(Tasks.of(""), Tasks.of(""));
+
+Create a task that resolves when any the provided tasks are resolved
+
+    // Task<String>... -> Task<String>
+    Task<String> task = Task<Tasks.any(Tasks.of(""), Tasks.of(""))
+
+##### Waiting
+
+You _can_ wait on a task to complete, this operation will throw an exception if that task fails or times out
+
+    // Task<String> -> String
+    String result = Tasks.get(Tasks.of(""), 1000);
 
