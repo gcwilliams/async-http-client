@@ -9,6 +9,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -20,6 +21,8 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.WriteTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
 import uk.co.gcwilliams.http.tasks.Task;
 
@@ -48,12 +51,27 @@ public class NettyAsyncHttpClient implements AsyncHttpClient {
      * @param workers the worker
      */
     public NettyAsyncHttpClient(EventLoopGroup workers) {
+        this(workers, 1000, 5, 5);
+    }
+
+    /**
+     * Constructor taking timeout settings
+     *
+     * @param workers the workers
+     * @param connectTimeoutMillis the connect timeout in milliseconds
+     * @param writeTimeoutSeconds the write timeout in seconds
+     * @param readTimeoutSeconds the read timeout in seconds
+     */
+    public NettyAsyncHttpClient(EventLoopGroup workers, int connectTimeoutMillis, int writeTimeoutSeconds, int readTimeoutSeconds) {
         bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis);
         bootstrap.group(workers);
         bootstrap.channel(NioSocketChannel.class);
         bootstrap.handler(new ChannelInitializer<NioSocketChannel>() {
             @Override
             protected void initChannel(NioSocketChannel ch) throws Exception {
+                ch.pipeline().addLast(new WriteTimeoutHandler(writeTimeoutSeconds));
+                ch.pipeline().addLast(new ReadTimeoutHandler(readTimeoutSeconds));
                 ch.pipeline().addLast(new HttpClientCodec());
                 ch.pipeline().addLast(new HttpObjectAggregator(Integer.MAX_VALUE));
             }
@@ -79,13 +97,12 @@ public class NettyAsyncHttpClient implements AsyncHttpClient {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
                     Channel channel = future.channel();
-                    channel.pipeline().addLast(new HttpResponseHandler(resolve, reject));
+                    channel.pipeline().addLast(new HttpRequestHandler(reject));
                     if (future.isSuccess()) {
                         channel.writeAndFlush(request);
-                        future.channel().closeFuture();
+                        channel.pipeline().addLast(new HttpResponseHandler(resolve, reject));
                     } else {
                         future.channel().pipeline().fireExceptionCaught(future.cause());
-                        future.channel().closeFuture();
                     }
                 }
             });
@@ -115,14 +132,19 @@ public class NettyAsyncHttpClient implements AsyncHttpClient {
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-            ByteBuf buffer = msg.content();
-            byte[] contents = new byte[buffer.readableBytes()];
-            msg.content().getBytes(buffer.readerIndex(), contents);
-            resolve.accept(new AsyncHttpMessageImpl(
-                msg.getStatus().code(),
-                msg.headers(),
-                contents
-            ));
+            try {
+                ByteBuf buffer = msg.content();
+                byte[] contents = new byte[buffer.readableBytes()];
+                msg.content().getBytes(buffer.readerIndex(), contents);
+                resolve.accept(new AsyncHttpMessageImpl(
+                    msg.getStatus().code(),
+                    msg.headers(),
+                    contents
+                ));
+            } finally {
+                ctx.channel().closeFuture();
+                ctx.close();
+            }
         }
 
         @Override
@@ -130,8 +152,38 @@ public class NettyAsyncHttpClient implements AsyncHttpClient {
             try {
                 reject.accept(cause instanceof Exception ? (Exception)cause : new RuntimeException(cause));
             } finally {
-                ReferenceCountUtil.release(cause);
                 ctx.channel().closeFuture();
+                ctx.close();
+                ReferenceCountUtil.release(cause);
+            }
+        }
+    }
+
+    /**
+     * A http request handler
+     *
+     */
+    private static final class HttpRequestHandler extends ChannelOutboundHandlerAdapter {
+
+        private final Consumer<Exception> reject;
+
+        /**
+         * Default constructor
+         *
+         * @param reject the reject consumer
+         */
+        private HttpRequestHandler(Consumer<Exception> reject) {
+            this.reject = reject;
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            try {
+                reject.accept(cause instanceof Exception ? (Exception) cause : new RuntimeException(cause));
+            } finally {
+                ctx.channel().closeFuture();
+                ctx.close();
+                ReferenceCountUtil.release(cause);
             }
         }
     }
