@@ -11,7 +11,7 @@ the [Folktale Task](https://github.com/folktale/data.task) library
     AsyncHttpClient client = new NettyAsyncHttpClient(loop);
 
     // create a task
-    Task<AsyncHttpMessage> task = client.get("http://www.google.co.uk");
+    Task<AsyncHttpMessage, Exception> task = client.get("http://www.google.co.uk");
 
     // fork the task
     task.fork(m -> {
@@ -41,12 +41,12 @@ As inspired by `PointFree-Fantasy`, operations can be composed together
 
     Function<AsyncHttpMessage, String> getPageTitle = compose(findTitle, parseHtml, decodeBody);
 
-    Function<String, Task<AsyncHttpMessage>> download = client::get;
+    Function<String, Task<AsyncHttpMessage, Exception>> download = client::get;
 
-    Function<String, Task<String>> operation = compose(fmap(getPageTitle), download);
+    Function<String, Task<String, Exception>> operation = compose(fmap(getPageTitle), download);
 
     // create the task
-    Task<String> task = operation.apply("http://www.bbc.co.uk");
+    Task<String, Exception> task = operation.apply("http://www.bbc.co.uk");
 
     // run the task
     task.fork(title -> {
@@ -65,23 +65,23 @@ The tasks class provides utilities for working with tasks.
 
 ##### Creating Tasks
 
-    // String -> Task<String>
-    Task<String> task = Tasks.of("");
+    // String -> Task<String, Exception>
+    Task<String, Exception> task = Tasks.of("");
 
-    // String -> Task<Exception>
-    Task<String> task = Tasks.rejected(new RuntimeException());
+    // String -> Task<String, Exception>
+    Task<String, Exception> task = Tasks.rejected(new RuntimeException());
 
 ##### Combining Tasks
 
 Create a task that resolves when all of the provided tasks are resolved
 
-    // Task<String>... -> Task<List<String>>
-    Task<List<String>> task = Tasks.all(Tasks.of(""), Tasks.of(""));
+    // Task<String, Exception>... -> Task<List<String>, List<Exception>>
+    Task<List<String>, List<Exception>> task = Tasks.all(Tasks.of(""), Tasks.of(""));
 
 Create a task that resolves when any of the provided tasks are resolved
 
-    // Task<String>... -> Task<String>
-    Task<String> task = Tasks.any(Tasks.of(""), Tasks.of(""))
+    // Task<String, Exception>... -> Task<String, Exception>
+    Task<String, Exception> task = Tasks.any(Tasks.of(""), Tasks.of(""));
 
 ##### Waiting
 
