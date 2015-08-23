@@ -6,6 +6,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
@@ -25,18 +26,18 @@ public class Tasks {
      * @param value the value
      * @return the new task
      */
-    public static <V> Task<V> of(V value) {
+    public static <V, E> Task<V, E> of(V value) {
         return new Task<>((resolve, reject) -> resolve.accept(value));
     }
 
     /**
      * Creates a rejected task
      *
-     * @param ex the exception
+     * @param error the error
      * @return the new task
      */
-    public static <V> Task<V> rejected(Exception ex) {
-        return new Task<>((resolve, reject) -> reject.accept(ex));
+    public static <V, E> Task<V, E> rejected(E error) {
+        return new Task<>((resolve, reject) -> reject.accept(error));
     }
 
     /**
@@ -47,7 +48,7 @@ public class Tasks {
      * @return the new task
      */
     @SafeVarargs
-    public static <V> Task<List<V>> all(Task<V>... tasks) {
+    public static <V, E> Task<List<V>, List<E>> all(Task<V, E>... tasks) {
         return all(asList(tasks));
     }
 
@@ -58,16 +59,26 @@ public class Tasks {
      * @param tasks the task the tasks to execute concurrently
      * @return the new task
      */
-    public static <V> Task<List<V>> all(List<Task<V>> tasks) {
+    public static <V, E> Task<List<V>, List<E>> all(List<Task<V, E>> tasks) {
         return new Task<>((resolve, reject) -> {
             AtomicInteger count = new AtomicInteger(tasks.size());
-            Queue<V> results = new ConcurrentLinkedQueue<>();
-            Consumer<Task<V>> onComplete = t -> t.fork(v -> {
-                results.add(v);
+            BiConsumer<Queue<V>, Queue<E>> resolveAndReject = (successful, failures) -> {
                 if (count.decrementAndGet() == 0) {
-                    resolve.accept(results.stream().collect(toList()));
+                    reject.accept(failures.stream().collect(toList()));
+                    resolve.accept(successful.stream().collect(toList()));
                 }
-            }, reject);
+            };
+            Queue<V> results = new ConcurrentLinkedQueue<>();
+            Queue<E> errors = new ConcurrentLinkedQueue<>();
+            Consumer<Task<V, E>> onComplete = t -> t.fork(
+            v -> {
+                results.add(v);
+                resolveAndReject.accept(results, errors);
+            },
+            e -> {
+                errors.add(e);
+                resolveAndReject.accept(results, errors);
+            });
             tasks.stream().forEach(onComplete);
         });
     }
@@ -80,7 +91,7 @@ public class Tasks {
      * @return the new task
      */
     @SafeVarargs
-    public static <V> Task<V> any(Task<V>... tasks) {
+    public static <V, E> Task<V, E> any(Task<V, E>... tasks) {
         return any(asList(tasks));
     }
 
@@ -91,14 +102,21 @@ public class Tasks {
      * @param tasks the task the tasks to execute concurrently
      * @return the new task
      */
-    public static <V> Task<V> any(List<Task<V>> tasks) {
+    public static <V, E> Task<V, E> any(List<Task<V, E>> tasks) {
         return new Task<>((resolve, reject) -> {
             AtomicBoolean resolved = new AtomicBoolean();
-            Consumer<Task<V>> onComplete = t -> t.fork(v -> {
+            AtomicInteger count = new AtomicInteger(tasks.size());
+            Consumer<Task<V, E>> onComplete = t -> t.fork(
+            v -> {
                 if (!resolved.getAndSet(true)) {
                     resolve.accept(v);
                 }
-            }, reject);
+            },
+            e -> {
+                if (count.decrementAndGet() == 0 && !resolved.get()) {
+                    reject.accept(e);
+                }
+            });
             tasks.stream().forEach(onComplete);
         });
     }
@@ -112,7 +130,7 @@ public class Tasks {
      * @param timeout the timeout
      * @return the underlying value of the task
      */
-    public static <V> V get(Task<V> task, long timeout) throws Exception {
+    public static <V> V get(Task<V, Exception> task, long timeout) throws Exception {
 
         final Mutable<Boolean> pending = new Mutable<>(true);
         final Mutable<V> result = new Mutable<>();

@@ -79,7 +79,7 @@ public class NettyAsyncHttpClient implements AsyncHttpClient {
     }
 
     @Override
-    public Task<AsyncHttpMessage> get(String url) {
+    public Task<AsyncHttpMessage, Exception> get(String url) {
         return new Task<>((resolve, reject) -> {
 
             URI uri = URI.create(url);

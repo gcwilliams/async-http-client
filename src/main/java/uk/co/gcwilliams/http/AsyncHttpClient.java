@@ -14,5 +14,5 @@ public interface AsyncHttpClient {
      *
      * @return the response body
      */
-    Task<AsyncHttpMessage> get(String url);
+    Task<AsyncHttpMessage, Exception> get(String url);
 }

@@ -9,16 +9,16 @@ import java.util.function.Function;
  *
  * Created by GWilliams on 15/08/2015.
  */
-public class Task<V> implements Functor<V> {
+public class Task<V, E> implements Functor<V> {
 
-    private final BiConsumer<Consumer<V>, Consumer<Exception>> computation;
+    private final BiConsumer<Consumer<V>, Consumer<E>> computation;
 
     /**
      * Default constructor
      *
      * @param computation the computation that will be performed asynchronous
      */
-    public Task(BiConsumer<Consumer<V>, Consumer<Exception>> computation) {
+    public Task(BiConsumer<Consumer<V>, Consumer<E>> computation) {
         this.computation = computation;
     }
 
@@ -31,10 +31,10 @@ public class Task<V> implements Functor<V> {
     @Override
     @SuppressWarnings("unchecked")
     public <NV, F extends Functor<NV>> F map(Function<V, NV> computation) {
-        BiConsumer<Consumer<V>, Consumer<Exception>> previous = this.computation;
-        return (F) new Task<NV>((resolve, reject) -> {
-            previous.accept(v -> resolve.accept(computation.apply(v)), reject::accept);
-        });
+        BiConsumer<Consumer<V>, Consumer<E>> previous = this.computation;
+        return (F) new Task<NV, E>((resolve, reject) ->
+            previous.accept(v -> resolve.accept(computation.apply(v)), reject::accept)
+        );
     }
 
     /**
@@ -44,11 +44,11 @@ public class Task<V> implements Functor<V> {
      * @param fn the function to chain
      * @return the task
      */
-    public <NV> Task<NV> chain(Function<V, Task<NV>> fn) {
-        BiConsumer<Consumer<V>, Consumer<Exception>> previous = this.computation;
-        return new Task<>((resolve, reject) -> {
-            previous.accept(v -> fn.apply(v).fork(resolve, reject), reject::accept);
-        });
+    public <NV> Task<NV, E> chain(Function<V, Task<NV, E>> fn) {
+        BiConsumer<Consumer<V>, Consumer<E>> previous = this.computation;
+        return new Task<>((resolve, reject) ->
+            previous.accept(v -> fn.apply(v).fork(resolve, reject), reject::accept)
+        );
     }
 
     /**
@@ -57,7 +57,7 @@ public class Task<V> implements Functor<V> {
      * @param resolve the resolve function
      * @param reject the reject function
      */
-    public void fork(Consumer<V> resolve, Consumer<Exception> reject) {
+    public void fork(Consumer<V> resolve, Consumer<E> reject) {
         computation.accept(resolve, reject);
     }
 }
