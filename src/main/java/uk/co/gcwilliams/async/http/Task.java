@@ -30,7 +30,13 @@ public class Task<T> {
      */
     public <R> Task<R> map(Function<T, R> mapper) {
         BiConsumer<Consumer<T>, Consumer<Exception>> previous = this.computation;
-        return new Task<>((resolve, reject) -> previous.accept(value -> resolve.accept(mapper.apply(value)), reject));
+        return new Task<>((resolve, reject) -> previous.accept(value -> {
+            try {
+                resolve.accept(mapper.apply(value));
+            } catch (Exception exception) {
+                reject.accept(exception);
+            }
+        }, reject));
     }
 
     /**
@@ -41,7 +47,47 @@ public class Task<T> {
      */
     public <R> Task<R> flatMap(Function<T, Task<R>> mapper) {
         BiConsumer<Consumer<T>, Consumer<Exception>> previous = this.computation;
-        return new Task<>((resolve, reject) -> previous.accept(value -> mapper.apply(value).fork(resolve, reject), reject));
+        return new Task<>((resolve, reject) -> previous.accept(value -> {
+            try {
+                mapper.apply(value).fork(resolve, reject);
+            } catch (Exception exception) {
+                reject.accept(exception);
+            }
+        }, reject));
+    }
+
+    /**
+     * Recovers a failed task
+     *
+     * @param mapper the mapper
+     * @return the task
+     */
+    public Task<T> recover(Function<Exception, T> mapper) {
+        BiConsumer<Consumer<T>, Consumer<Exception>> previous = this.computation;
+        return new Task<>((resolve, reject) -> previous.accept(resolve, ex -> {
+            try {
+                resolve.accept(mapper.apply(ex));
+            } catch (Exception exception) {
+                reject.accept(exception);
+            }
+        }));
+    }
+
+    /**
+     * Recovers a failed task
+     *
+     * @param mapper the mapper
+     * @return the task
+     */
+    public Task<T> recoverWith(Function<Exception, Task<T>> mapper) {
+        BiConsumer<Consumer<T>, Consumer<Exception>> previous = this.computation;
+        return new Task<>((resolve, reject) -> previous.accept(resolve, ex -> {
+            try {
+                mapper.apply(ex).fork(resolve, reject);
+            } catch (Exception exception) {
+                reject.accept(exception);
+            }
+        }));
     }
 
     /**
@@ -51,7 +97,11 @@ public class Task<T> {
      * @param reject the reject function
      */
     public void fork(Consumer<T> resolve, Consumer<Exception> reject) {
-        computation.accept(resolve, reject);
+        try {
+            computation.accept(resolve, reject);
+        } catch (Exception exception) {
+            reject.accept(exception);
+        }
     }
 
     /**

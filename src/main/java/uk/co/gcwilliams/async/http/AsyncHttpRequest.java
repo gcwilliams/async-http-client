@@ -3,6 +3,7 @@ package uk.co.gcwilliams.async.http;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,10 @@ public class AsyncHttpRequest {
 
     private final byte[] body;
 
+    private final Duration writeTimeout;
+
+    private final Duration readTimeout;
+
     /**
      * Constructor
      *
@@ -34,16 +39,22 @@ public class AsyncHttpRequest {
      * @param uri the URI
      * @param headers the headers
      * @param body the body
+     * @param writeTimeout the write timeout
+     * @param readTimeout the read timeout
      */
     private AsyncHttpRequest(
             HttpMethod method,
             URI uri,
             Map<String, List<String>> headers,
-            byte[] body) {
+            byte[] body,
+            Duration writeTimeout,
+            Duration readTimeout) {
         this.method = method;
         this.uri = uri;
         this.headers = headers;
         this.body = body;
+        this.writeTimeout = writeTimeout;
+        this.readTimeout = readTimeout;
     }
 
     /**
@@ -83,6 +94,24 @@ public class AsyncHttpRequest {
     }
 
     /**
+     * Gets the write timeout
+     *
+     * @return the write timeout
+     */
+    public Duration getWriteTimeout() {
+        return writeTimeout;
+    }
+
+    /**
+     * Gets the read timeout
+     *
+     * @return the read timeout
+     */
+    public Duration getReadTimeout() {
+        return readTimeout;
+    }
+
+    /**
      * The HTTP method
      *
      */
@@ -110,6 +139,16 @@ public class AsyncHttpRequest {
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Creates the builder
+     *
+     * @param request the request
+     * @return the builder
+     */
+    public static Builder builder(AsyncHttpRequest request) {
+        return new Builder(request);
     }
 
     /**
@@ -200,9 +239,29 @@ public class AsyncHttpRequest {
 
         private Map<String, List<String>> headers = new HashMap<>();
 
-        private byte[] body;
+        private byte[] body = new byte[0];
 
+        private Duration writeTimeout = Duration.ofSeconds(5);
+
+        private Duration readTimeout = Duration.ofSeconds(10);
+
+        /**
+         * Constructor
+         *
+         */
         private Builder() {
+        }
+
+        /**
+         * Constructor
+         *
+         * @param request the request
+         */
+        private Builder(AsyncHttpRequest request) {
+            this.method = request.method;
+            this.uri = request.uri;
+            this.headers = new HashMap<>(request.headers);
+            this.body = request.body;
         }
 
         /**
@@ -252,6 +311,18 @@ public class AsyncHttpRequest {
         }
 
         /**
+         * Sets the header
+         *
+         * @param header the header name
+         * @param values the values
+         * @return the builder
+         */
+        public Builder withHeader(String header, List<String> values) {
+            this.headers.put(header, values);
+            return this;
+        }
+
+        /**
          * Sets the body
          *
          * @param body the body
@@ -285,6 +356,28 @@ public class AsyncHttpRequest {
         }
 
         /**
+         * Sets the write timeout
+         *
+         * @param writeTimeout the connection timeout
+         * @return the builder
+         */
+        public Builder withWriteTimeout(Duration writeTimeout) {
+            this.writeTimeout = writeTimeout;
+            return this;
+        }
+
+        /**
+         * Sets the read timeout
+         *
+         * @param readTimeout the read timeout
+         * @return the builder
+         */
+        public Builder withReadTimeout(Duration readTimeout) {
+            this.readTimeout = readTimeout;
+            return this;
+        }
+
+        /**
          * Builds the request
          *
          * @return the request
@@ -296,10 +389,12 @@ public class AsyncHttpRequest {
                 throw new IllegalStateException("The URI should be absolute and should be either HTTP or HTTPS");
             }
             requireNonNull(headers, "The HTTP headers should not be null");
-            if (method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.OPTIONS) {
+            if ((method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.OPTIONS) && body != null && body.length > 0) {
                 throw new IllegalStateException("GET, HEAD, or OPTIONS should not have request bodies");
             }
-            return new AsyncHttpRequest(method, uri, headers, body);
+            requireNonNull(writeTimeout, "the write timeout should be set");
+            requireNonNull(readTimeout, "the read timeout should be set");
+            return new AsyncHttpRequest(method, uri, headers, body != null ? body : new byte[0], writeTimeout, readTimeout);
         }
     }
 }

@@ -5,7 +5,7 @@ package uk.co.gcwilliams.async.http;
  *
  * @author : Gareth Williams
  **/
-public interface AsyncHttpClient {
+public interface AsyncHttpClient extends AutoCloseable {
 
     /**
      * Prepares the request

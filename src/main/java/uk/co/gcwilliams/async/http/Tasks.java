@@ -1,6 +1,8 @@
 package uk.co.gcwilliams.async.http;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -11,7 +13,6 @@ import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
-import static java.util.stream.Stream.concat;
 
 /**
  * The tasks utility
@@ -27,9 +28,10 @@ public class Tasks {
      * Gets the value from the task
      *
      * @param task the task
+     * @param timeout the timeout
      * @return the value
      */
-    public static <T> T get(Task<T> task) throws Exception {
+    public static <T> T get(Task<T> task, Duration timeout) throws Exception {
 
         AtomicBoolean completed = new AtomicBoolean(false);
         Runnable complete = () -> {
@@ -47,13 +49,13 @@ public class Tasks {
             ex -> { exception.set(ex); complete.run(); });
 
         synchronized (completed) {
-            while (!completed.get()) {
-                try {
-                    completed.wait();
-                } catch (InterruptedException ex) {
-                    // ignore
-                }
+            if (!completed.get()) {
+                completed.wait(timeout.toMillis());
             }
+        }
+
+        if (!completed.get()) {
+            throw new TimeoutException();
         }
 
         if (exception.get() != null) {
@@ -70,10 +72,13 @@ public class Tasks {
      * @return the task
      */
     public static <T> Task<List<T>> traverse(List<Task<T>> tasks) {
-        return tasks.stream().reduce(
-            Task.of(List.of()),
-            (ta, tb) -> ta.flatMap(a -> tb.map(b -> concat(a.stream(), Stream.of(b)).collect(toList()))),
-            (ta, tb) -> ta.flatMap(a -> tb.map(b -> concat(a.stream(), b.stream()).collect(toList()))));
+        Task<List<T>> seed = Task.of(List.of());
+        for (Task<T> task : tasks) {
+            seed = seed.flatMap(previous ->
+                task.map(next ->
+                    Stream.concat(previous.stream(), Stream.of(next)).collect(toList())));
+        }
+        return seed;
     }
 
     /**
