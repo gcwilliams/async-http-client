@@ -113,10 +113,21 @@ Multiple tasks with different types
 Useful in Unit Tests
 
     // arrange
-    Task<String> action = Task.of("Homer")
+    Task<String> action = Task.of("Homer");
 
     // act
     String homer = Tasks.get(action, Duration.ofMinutes(1));
 
     // assert
-    assertThat(homer, equalTo("Homer"))l
+    assertThat(homer, equalTo("Homer"));
+
+### Completion Stage
+
+Tasks are simple and work great for the HTTP client, however, you might want to use `CompletionStage<T>` or `CompletableFuture<T>`
+in the rest of your code base. You can use the CompletionStages utility class to convert a task to a `CompletionStage<T>`.
+
+    Task<String> task = Task.of("Homer");
+
+    CompletionStage<String> completionStage = CompletionStages.toCompletionStage(task);
+
+    String homer = completionStage.toCompletableFuture().get(30, TimeUnit.SECONDS)
