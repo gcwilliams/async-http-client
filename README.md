@@ -116,7 +116,7 @@ Useful in Unit Tests
     Task<String> action = Task.of("Homer")
 
     // act
-    String homer = Tasks.get(action);
+    String homer = Tasks.get(action, Duration.ofMinutes(1));
 
     // assert
     assertThat(homer, equalTo("Homer"))l
