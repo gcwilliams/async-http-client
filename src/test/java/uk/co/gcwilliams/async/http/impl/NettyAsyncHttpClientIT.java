@@ -37,7 +37,7 @@ class NettyAsyncHttpClientIT {
         );
     }
 
-    @ParameterizedTest @MethodSource("urls") void get(String url) throws Exception {
+    @ParameterizedTest @MethodSource("urls") void request(String url) throws Exception {
 
         try (AsyncHttpClient http = NettyAsyncHttpClient
                 .builder()
