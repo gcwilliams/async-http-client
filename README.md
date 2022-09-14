@@ -1,5 +1,10 @@
 # Async HTTP Client
 
+- Async HTTP requests
+- HTTP / HTTPS
+- Connection Pooling
+- SNI
+
 ### Usage
 
 ### Requests
