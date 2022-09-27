@@ -17,6 +17,7 @@ import uk.co.gcwilliams.async.http.AsyncHttpResponse;
 import uk.co.gcwilliams.async.http.Task;
 import uk.co.gcwilliams.async.http.Tasks;
 import uk.co.gcwilliams.async.http.listeners.DefaultHeadersListener;
+import uk.co.gcwilliams.async.http.listeners.LoggingListener;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -61,10 +62,10 @@ class NettyAsyncHttpClientTest {
             "Async-Http-Client");
         HTTP = NettyAsyncHttpClient.builder()
             .withConnectTimeout(Duration.ofSeconds(20))
-            .withMaxConnections(500)
+            .withMaxConnections(100)
             .withMaxPendingAcquires(Integer.MAX_VALUE)
             .withAcquireTimeout(Duration.ofMinutes(2))
-            .withListenerFactory(() -> List.of(userAgentListener))
+            .withListenerFactory(() -> List.of(userAgentListener, LoggingListener.INSTANCE))
             .build();
     }
 
@@ -74,7 +75,7 @@ class NettyAsyncHttpClientTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"GET", "POST", "PUT", "DELETE", "HEAD", "PATCH", "OPTIONS"})
-    void postRequest(String method, WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+    void methods(String method, WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
 
         // arrange
         stubFor(request(method, urlEqualTo("/")).willReturn(ok().withBody(randomBytes(200))));
@@ -123,13 +124,13 @@ class NettyAsyncHttpClientTest {
             .build();
 
         // act
-        List<Task<AsyncHttpResponse>> tasks = range(0, 2500)
+        List<Task<AsyncHttpResponse>> tasks = range(0, 250000)
             .mapToObj(__ -> HTTP.prepare(request))
             .collect(toList());
         List<AsyncHttpResponse> responses = Tasks.get(Tasks.traverseP(tasks), Duration.ofMinutes(2));
 
         // assert
-        assertThat(responses.size(), equalTo(2500));
+        assertThat(responses.size(), equalTo(250000));
         for (AsyncHttpResponse response : responses) {
             assertThat(response.getStatusCode(), equalTo(200));
             assertThat(response.getHeaders(), aMapWithSize(greaterThan(0)));

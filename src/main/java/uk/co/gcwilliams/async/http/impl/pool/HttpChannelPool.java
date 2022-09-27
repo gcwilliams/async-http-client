@@ -12,11 +12,23 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import io.netty.util.concurrent.Future;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.co.gcwilliams.async.http.impl.handler.DefaultSslHandler;
 import uk.co.gcwilliams.async.http.impl.handler.HttpRequestInboundHandler;
 import uk.co.gcwilliams.async.http.impl.handler.HttpRequestOutboundHandler;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * The HTTP channel pool
@@ -57,7 +69,7 @@ public class HttpChannelPool extends FixedChannelPool {
                     host,
                     port,
                     configuration),
-            new HttpChannelHealthChecker(),
+            new HttpChannelHealthChecker(host),
             AcquireTimeoutAction.NEW,
             acquireTimeout.toMillis(),
             maxConnections,
@@ -142,15 +154,45 @@ public class HttpChannelPool extends FixedChannelPool {
      */
     private static class HttpChannelHealthChecker implements ChannelHealthChecker {
 
+        private static final Logger LOGGER = LoggerFactory.getLogger(HttpChannelHealthChecker.class);
+
+        private final ScheduledExecutorService EXECUTOR = Executors.newScheduledThreadPool(1);
+
+        private final String host;
+
+        private volatile Set<String> allByName = new HashSet<>();
+
+        private HttpChannelHealthChecker(String host) {
+            this.host = host;
+            schedule();
+        }
+
         @Override
         public Future<Boolean> isHealthy(Channel channel) {
-
             if (!(channel.isRegistered() && channel.isActive() && channel.isOpen())) {
                 return channel.eventLoop().newSucceededFuture(false);
             }
+            if (!(channel.remoteAddress() instanceof InetSocketAddress)) {
+                return channel.eventLoop().newSucceededFuture(true);
+            }
+            InetSocketAddress address = (InetSocketAddress) channel.remoteAddress();
+            return channel.eventLoop().newSucceededFuture(allByName.contains(address.getAddress().getHostAddress()));
+        }
 
-            // TODO: DNS check
-            return channel.eventLoop().newSucceededFuture(true);
+        private void schedule() {
+            allByName = Arrays.stream(getAllByName(host))
+                .map(InetAddress::getHostAddress)
+                .collect(Collectors.toUnmodifiableSet());
+            EXECUTOR.schedule(this::schedule, 60, TimeUnit.SECONDS);
+        }
+
+        private static InetAddress[] getAllByName(String host) {
+            try {
+                return InetAddress.getAllByName(host);
+            } catch (UnknownHostException ex) {
+                LOGGER.warn("Unable to get InetAddresses for {}", host, ex);
+                return new InetAddress[0];
+            }
         }
     }
 }
