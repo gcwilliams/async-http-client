@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -70,7 +72,10 @@ public class NettyAsyncHttpClient implements AsyncHttpClient {
 
         return Task.of((resolve, reject) -> {
 
-            List<AsyncHttpClientListener> listeners = listenerFactory.createListeners();
+            List<AsyncHttpClientListener> listeners = Stream.concat(
+                    listenerFactory.createListeners().stream(),
+                    request.getListeners().stream())
+                .collect(Collectors.toList());
 
             listeners.forEach(AsyncHttpClientListener::onPrepare); // TODO: handle exceptions
 

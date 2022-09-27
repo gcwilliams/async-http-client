@@ -5,6 +5,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -32,6 +33,8 @@ public class AsyncHttpRequest {
 
     private final Duration readTimeout;
 
+    private final List<AsyncHttpClientListener> listeners;
+
     /**
      * Constructor
      *
@@ -41,6 +44,7 @@ public class AsyncHttpRequest {
      * @param body the body
      * @param writeTimeout the write timeout
      * @param readTimeout the read timeout
+     * @param listeners the listeners
      */
     private AsyncHttpRequest(
             HttpMethod method,
@@ -48,13 +52,15 @@ public class AsyncHttpRequest {
             Map<String, List<String>> headers,
             byte[] body,
             Duration writeTimeout,
-            Duration readTimeout) {
+            Duration readTimeout,
+            List<AsyncHttpClientListener> listeners) {
         this.method = method;
         this.uri = uri;
         this.headers = headers;
         this.body = body;
         this.writeTimeout = writeTimeout;
         this.readTimeout = readTimeout;
+        this.listeners = listeners;
     }
 
     /**
@@ -109,6 +115,15 @@ public class AsyncHttpRequest {
      */
     public Duration getReadTimeout() {
         return readTimeout;
+    }
+
+    /**
+     * Gets the listeners
+     *
+     * @return the listeners
+     */
+    public List<AsyncHttpClientListener> getListeners() {
+        return listeners;
     }
 
     /**
@@ -245,6 +260,8 @@ public class AsyncHttpRequest {
 
         private Duration readTimeout = Duration.ofSeconds(10);
 
+        private List<AsyncHttpClientListener> listeners = new LinkedList<>();
+
         /**
          * Constructor
          *
@@ -378,6 +395,28 @@ public class AsyncHttpRequest {
         }
 
         /**
+         * Sets the listeners
+         *
+         * @param listeners the listeners
+         * @return the builder
+         */
+        public Builder withListeners(List<AsyncHttpClientListener> listeners) {
+            this.listeners = listeners;
+            return this;
+        }
+
+        /**
+         * Adds the listener
+         *
+         * @param listener the listener
+         * @return the builder
+         */
+        public Builder withListener(AsyncHttpClientListener listener) {
+            this.listeners.add(listener);
+            return this;
+        }
+
+        /**
          * Builds the request
          *
          * @return the request
@@ -394,7 +433,8 @@ public class AsyncHttpRequest {
             }
             requireNonNull(writeTimeout, "the write timeout should be set");
             requireNonNull(readTimeout, "the read timeout should be set");
-            return new AsyncHttpRequest(method, uri, headers, body != null ? body : new byte[0], writeTimeout, readTimeout);
+            requireNonNull(listeners, "the listeners should be set");
+            return new AsyncHttpRequest(method, uri, headers, body != null ? body : new byte[0], writeTimeout, readTimeout, listeners);
         }
     }
 }

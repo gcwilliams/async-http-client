@@ -65,7 +65,7 @@ class NettyAsyncHttpClientTest {
             .withMaxConnections(100)
             .withMaxPendingAcquires(Integer.MAX_VALUE)
             .withAcquireTimeout(Duration.ofMinutes(2))
-            .withListenerFactory(() -> List.of(userAgentListener, LoggingListener.INSTANCE))
+            .withListenerFactory(() -> List.of(userAgentListener))
             .build();
     }
 
@@ -91,6 +91,7 @@ class NettyAsyncHttpClientTest {
             .withURI(URI.create(format("http://localhost:%s", wmRuntimeInfo.getHttpPort())))
             .withHeader("Content-Type", "application/octet-stream")
             .withBody(requestBody)
+            .withListener(LoggingListener.INSTANCE)
             .build();
 
         // act
