@@ -62,7 +62,7 @@ class NettyAsyncHttpClientTest {
             "Async-Http-Client");
         HTTP = NettyAsyncHttpClient.builder()
             .withConnectTimeout(Duration.ofSeconds(20))
-            .withMaxConnections(100)
+            .withMaxConnections(200)
             .withMaxPendingAcquires(Integer.MAX_VALUE)
             .withAcquireTimeout(Duration.ofMinutes(2))
             .withListenerFactory(() -> List.of(userAgentListener))
