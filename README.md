@@ -1,11 +1,11 @@
 # Async HTTP Client
 
+[![Java CI with Maven](https://github.com/gcwilliams/async-http-client/actions/workflows/maven.yml/badge.svg)](https://github.com/gcwilliams/async-http-client/actions/workflows/maven.yml)
+
 - Async HTTP requests
 - HTTP / HTTPS
 - Connection Pooling
 - SNI
-
-[![Java CI with Maven](https://github.com/gcwilliams/async-http-client/actions/workflows/maven.yml/badge.svg)](https://github.com/gcwilliams/async-http-client/actions/workflows/maven.yml)
 
 ### Usage
 
