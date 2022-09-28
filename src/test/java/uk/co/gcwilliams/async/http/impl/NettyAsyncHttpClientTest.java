@@ -62,7 +62,7 @@ class NettyAsyncHttpClientTest {
             "Async-Http-Client");
         HTTP = NettyAsyncHttpClient.builder()
             .withConnectTimeout(Duration.ofSeconds(20))
-            .withMaxConnections(200)
+            .withMaxConnections(50)
             .withMaxPendingAcquires(Integer.MAX_VALUE)
             .withAcquireTimeout(Duration.ofMinutes(2))
             .withListenerFactory(() -> List.of(userAgentListener))
@@ -125,13 +125,13 @@ class NettyAsyncHttpClientTest {
             .build();
 
         // act
-        List<Task<AsyncHttpResponse>> tasks = range(0, 250000)
+        List<Task<AsyncHttpResponse>> tasks = range(0, 2500)
             .mapToObj(__ -> HTTP.prepare(request))
             .collect(toList());
         List<AsyncHttpResponse> responses = Tasks.get(Tasks.traverseP(tasks), Duration.ofMinutes(2));
 
         // assert
-        assertThat(responses.size(), equalTo(250000));
+        assertThat(responses.size(), equalTo(2500));
         for (AsyncHttpResponse response : responses) {
             assertThat(response.getStatusCode(), equalTo(200));
             assertThat(response.getHeaders(), aMapWithSize(greaterThan(0)));
